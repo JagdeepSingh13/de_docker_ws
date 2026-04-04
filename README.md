@@ -58,3 +58,7 @@ docker run -it --rm \
 to interact with pg container use: `uv add --dev pgcli` (in pipeline dir) (--dev to not sync this in Dockerfile)
 
 to connect to Postgres: `uv run pgcli -h localhost -p 5432 -u root -d ny_taxi`
+
+jupyter -> uv add --dev jupyter, uv run jupyter notebook
+
+Using SQLAlchemy and pandas to read the csv's and write to pg table in chunks or batches
