@@ -50,6 +50,8 @@ docker run -it --rm \
     -e POSTGRES_DB="ny_taxi" \
     -v ny_taxi_postgres_data:/var/lib/postgresql \
     -p 5432:5432 \
+    --network=pg-network \
+    --name=pgdatabase \
     postgres:18
 ```
 
@@ -62,3 +64,44 @@ to connect to Postgres: `uv run pgcli -h localhost -p 5432 -u root -d ny_taxi`
 jupyter -> uv add --dev jupyter, uv run jupyter notebook
 
 Using SQLAlchemy and pandas to read the csv's and write to pg table in chunks or batches
+
+converting jupyter notebook to script: `uv run jupyter nbconvert --to=script notebook.ipynb`
+
+re-dockerize the script to run the data ingestion and move to pg: `docker build -t taxi_ingest:v001 .`
+
+running the script in docker container:
+```bash
+docker run -it --rm taxi_ingest:v001 \
+  --pg-user=root \
+  --pg-pass=root \
+  --pg-host=localhost \
+  --pg-port=5432 \
+  --pg-db=ny_taxi \
+  --target-table=yellow_taxi_data_2021_1
+```
+
+there is issue with psycopg to import libpq while running the container fix with:
+```bash
+    # Install system dependencies for psycopg in Dockerfile 
+    RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
+``` 
+
+Now the container taxi_ingest:v001 can't connect to localhost:5432 on postgres:18 container so we make a network
+
+create a network: `docker network create pg-network`
+
+add to pg and taxi_ongest:v001 containers using: `--network=pg-network`
+
+```bash
+docker run -it --rm \
+--network=pg-network \
+taxi_ingest:v001 \
+  --pg-user=root \
+  --pg-pass=root \
+  --pg-host=pgdatabase \
+  --pg-port=5432 \
+  --pg-db=ny_taxi \
+  --target-table=yellow_taxi_data_2021_1
+```
+
+add `--network` and `--pg-host=pgdatabase` the name of postgres:18 container in network to connect
